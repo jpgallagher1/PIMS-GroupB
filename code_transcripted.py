@@ -1,4 +1,5 @@
 import numpy as np
+from numpy.polynomial.legendre import Legendre
 
 def gausslegendre(N):
     points, weights = np.polynomial.legendre.leggauss(N)
