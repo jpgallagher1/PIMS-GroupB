@@ -10,7 +10,12 @@ def compute_mass_matrix(sigma_t, x_L, x_R, Np):
           for n in range(Np):
             for pt in range(Nq):
                 x_pt = (x_R - x_L) * ir_mus[pt] / 2 + (x_R + x_L) / 2
-                M_local[m, n] += sigma_t(x_pt) * ir_ws[pt] * eval_pk(ir_mus[pt], m, mus) * eval_pk(ir_mus[pt], n, mus)
+                if isinstance(sigma_t,  float) or isinstance(sigma_t,  int):
+                    # Assuming sigma_t is a constant
+                    M_local[m, n] += sigma_t * ir_ws[pt] * eval_pk(ir_mus[pt], m, mus) * eval_pk(ir_mus[pt], n, mus)
+                else:
+                    # Assuming sigma_t is a function
+                    M_local[m, n] += sigma_t(x_pt) * ir_ws[pt] * eval_pk(ir_mus[pt], m, mus) * eval_pk(ir_mus[pt], n, mus)
 
       jacobi = (x_R - x_L) / 2.0
       M_local *= jacobi
