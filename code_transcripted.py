@@ -17,8 +17,8 @@ def gausslobatto(N):
     w = np.zeros(N)
     for i in range(N):
         xi = x[i]
-        Pn_i_val = Pn_i(xi)
-        w[i] = 2.0 / (N * (N-1) * (Pn_i_val**2))
+        Pn_1_val = Pn_1(xi)
+        w[i] = 2.0 / (N * (N-1) * (Pn_1_val**2))
     return x, w
 
 def eval_pk(x, i, nodes):
