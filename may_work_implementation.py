@@ -1,32 +1,30 @@
 import numpy as np
 from numpy.polynomial.legendre import Legendre
 
-def compute_mass_matrix(sigma_t, x_L, x_R, Np, Nq = None):
-      if Nq is None:
-          Nq = Np
+def compute_mass_matrix(sigma_t, x_L, x_R, Np):
+      Nq = 3 * Np
       mus, ws = gausslobatto(Np)
       ir_mus, ir_ws = gausslobatto(Nq)
       M_local = np.zeros((Np, Np))
       for m in range(Np):
           for n in range(Np):
             for pt in range(Nq):
-                M_local[m, n] += sigma_t * ir_ws[pt] * eval_pk(ir_mus[pt], m, mus) * eval_pk(ir_mus[pt], n, mus)
+                x_pt = (x_R - x_L) * ir_mus[pt] / 2 + (x_R + x_L) / 2
+                M_local[m, n] += sigma_t(x_pt) * ir_ws[pt] * eval_pk(ir_mus[pt], m, mus) * eval_pk(ir_mus[pt], n, mus)
 
       jacobi = (x_R - x_L) / 2.0
       M_local *= jacobi
       return M_local
 
 def compute_deriv_matrix(x_L, x_R, Np, Nq = None):
-      if Nq is None:
-          Nq = Np
+      Nq = 3 * Np
       mus, ws = gausslobatto(Np)
       ir_mus, ir_ws = gausslobatto(Nq)
       M_local = np.zeros((Np, Np))
       for m in range(Np):
           for n in range(Np):
-            for pt in range(Np):
-              M_local[m, n] += ws[pt] * eval_pk_deriv(mus[pt], m, mus) * eval_pk(mus[pt], n, mus)
-
+            for pt in range(Nq):              
+                M_local[m, n] += ir_ws[pt] * eval_pk_deriv(ir_mus[pt], m, mus) * eval_pk(ir_mus[pt], n, mus)
       jacobi = (x_R - x_L) / 2.0
       M_local *= jacobi
       return M_local
