@@ -1,5 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
+import tqdm
 import os
 # from   numpy.polynomial.legendre import Legendre
 
@@ -282,7 +283,7 @@ def transport_direct_solve_diffusive(σ_t, σ_a, ε, source, inflow, Np, Nμ, Nt
     
     ψ_weights_all = np.zeros((Nμ, Ne*Np)) # For each μ, for each element, we store the weight vector
 
-    for t in range(Nt):
+    for t in tqdm.tqdm(range(Nt)):
         # Compute integral from -1 to 1 of ψμ by quadrature
         φ = (w_μ.reshape((-1, 1)) * ψ_weights_all).sum(axis=0) # shape (Ne*Np)
         Msφ = 1/2 * M_s @ φ
@@ -297,7 +298,7 @@ def transport_direct_solve_diffusive(σ_t, σ_a, ε, source, inflow, Np, Nμ, Nt
                 qs_inflow = compute_inflow_term_minus(lambda x: inflow(x,μ), Np, xs)
         
             # Compute RHS
-            qs = ε * (compute_source_term(lambda x: source(x, μ), Np, xs) + np.abs(μ)*qs_inflow)
+            qs = ε * (compute_source_term(lambda x: source(x, μ), Np, xs))  + np.abs(μ)*qs_inflow
             b  = Msφ + qs
             ψ_weights_all[i_μ] = np.linalg.solve(A, b)
     
