@@ -258,7 +258,7 @@ def plot_solution(ψ_weights, xs, Np, μ=None, num_plot_pts=200, exact_ψ_func=N
     plt.figure()
     for je in range(Ne):
         a, b = xs[je], xs[je+1]
-        x_p  = ξ_to_x(ξ_p, a, b
+        x_p  = ξ_to_x(ξ_p, a, b)
         
         # Reconstruct polynomial on this element
         ψ_weights_loc = ψ_weights[je*Np:(je+1)*Np]
