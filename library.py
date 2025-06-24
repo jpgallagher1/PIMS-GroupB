@@ -254,7 +254,7 @@ def transport_direct_solve_diffusive(σ_t, σ_a, ε, source, inflow, Np, Nμ, Nt
         σ_a    : Absorption scattering opacity func (can be a const or a func of x)
         ε      : Scattering parameter
         # ψ_0    : Initial guess for the solution (can be a const or a func of x,k)
-        source : Source term func (can be a const or a func of x)
+        source : Source term func (can be a const or a func of x and μ)
         inflow : Inflow term func (can be a const or a func of x)
         Np     : Number of Legendre basis funcs per element
         Nμ     : Number of polynomial degrees in μ direction (number of Gauss-Legendre points)
@@ -291,13 +291,13 @@ def transport_direct_solve_diffusive(σ_t, σ_a, ε, source, inflow, Np, Nμ, Nt
             # Compute A and inflow depending on the sign of μ
             if μ>=0:
                 A = -μ * G + μ * F_plus + M_t
-                qs_inflow = compute_inflow_term_plus(inflow, Np, xs)
+                qs_inflow = compute_inflow_term_plus(lambda x: inflow(x,μ), Np, xs)
             else:
                 A = -μ * G + μ * F_minus + M_t
-                qs_inflow = compute_inflow_term_minus(inflow, Np, xs)
+                qs_inflow = compute_inflow_term_minus(lambda x: inflow(x,μ), Np, xs)
         
             # Compute RHS
-            qs = ε * (compute_source_term(source, Np, xs) + np.abs(μ)*qs_inflow)
+            qs = ε * (compute_source_term(lambda x: source(x, μ), Np, xs) + np.abs(μ)*qs_inflow)
             b  = Msφ + qs
             ψ_weights_all[i_μ] = np.linalg.solve(A, b)
     
