@@ -231,6 +231,7 @@ def transport_direct_solve(μ:float, σ_t, source, inflow, Np, xs):
     M   = assemble_mass_matrix(σ_t, Np, xs)
     G   = assemble_deriv_matrix(Np, xs)
     F_plus, F_minus = assemble_face_matrices(Np, xs)
+    print(np.shape(M), np.shape(G), np.shape(F_plus), np.shape(F_minus))
 
     # Compute A and inflow depending on the sign of μ
     if μ>=0:
@@ -242,9 +243,9 @@ def transport_direct_solve(μ:float, σ_t, source, inflow, Np, xs):
     
     # Compute source term
     qs = compute_source_term(source, Np, xs) + np.abs(μ)*qs_inflow
-    ψ_weights = np.linalg.solve(A, qs).reshape((Ne,Np))
+    ψ_weights = np.linalg.solve(A, qs)
     
-    return ψ_weights
+    return ψ_weights.reshape((Ne,Np))
 
 def transport_direct_solve_diffusive(σ_t, σ_a, ε, source, inflow, Np, Nμ, Nt, xs):
     """
@@ -272,24 +273,19 @@ def transport_direct_solve_diffusive(σ_t, σ_a, ε, source, inflow, Np, Nμ, Nt
 
     # Assemble matrices
     M_t = assemble_mass_matrix(lambda x: σ_t(x)/ε, Np, xs)
-    M_s = assemble_mass_matrix(σ_s, Np, xs)
+    M_s = assemble_mass_matrix(σ_s, Np, xs) # shape (Ne*Np, Ne*Np)
     G   = assemble_deriv_matrix(Np, xs)
     F_plus, F_minus = assemble_face_matrices(Np, xs)
     
     ξ_μ, w_μ = gausslegendre(Nμ)
-    μs     = ξ_μ # because μ and ξ both in [-1,1]
+    μs       = ξ_μ # because μ and ξ both in [-1,1]
     
-    ψ_weights = np.zeros((Nμ, Ne, Np)) # For each μ, for each element, we store the weight vector
+    ψ_weights_all = np.zeros((Nμ, Ne*Np)) # For each μ, for each element, we store the weight vector
 
     for t in range(Nt):
         # Compute integral from -1 to 1 of ψμ by quadrature
-        φ = np.zeros((Ne, Np))
-        for i_μ, μ in enumerate(μs): # for each μ,
-            pass
-            #TODO
-            #reconstruct the value of psi
-
-            # φ += w_μ[i_μ] ...
+        φ = (w_μ.reshape((-1, 1)) * ψ_weights_all).sum(axis=0) # shape (Ne*Np)
+        Msφ = 1/2 * M_s @ φ
 
         for i_μ, μ in enumerate(μs):
             # Compute A and inflow depending on the sign of μ
@@ -300,11 +296,12 @@ def transport_direct_solve_diffusive(σ_t, σ_a, ε, source, inflow, Np, Nμ, Nt
                 A = -μ * G + μ * F_minus + M_t
                 qs_inflow = compute_inflow_term_minus(inflow, Np, xs)
         
-            # Compute source term
+            # Compute RHS
             qs = ε * (compute_source_term(source, Np, xs) + np.abs(μ)*qs_inflow)
-            ψ_weights[i_μ] = np.linalg.solve(A, qs).reshape((Ne,Np))
+            b  = Msφ + qs
+            ψ_weights_all[i_μ] = np.linalg.solve(A, b)
     
-    return ψ_weights, μs
+    return ψ_weights_all.reshape((Nμ,Ne,Np)), μs
 
 # print(transport_direct_solve( 1.0, lambda x: 1.0, lambda x: 1.0, lambda x: 1.0, 2, np.array([0.0, 0.5, 1.0])))
 # print(transport_direct_solve(-1.0, lambda x: 1.0, lambda x: 1.0, lambda x: 1.0, 2, np.array([0.0, 0.5, 1.0])))
