@@ -1,5 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
+import os
 # from   numpy.polynomial.legendre import Legendre
 
 def ξ_to_x(ξ, a, b):
@@ -244,6 +245,51 @@ def transport_direct_solve(μ:float, σ_t, source, inflow, Np, xs):
     
     return ψ_weights
 
+def transport_direct_solve_diffusive(σ_t, σ_a, ε, source, inflow, Np_x, Np_μ, N_t, xs):
+    """
+    Solve the transport eq using a DG + collocation (discrete ordinates) method.
+        σ_t    : Transport cross-section func (can be a const or a func of x)
+        σ_a    : Absorption cross-section func (can be a const or a func of x)
+        ε      : Scattering parameter
+        source : Source term func (can be a const or a func of x)
+        inflow : Inflow term func (can be a const or a func of x)
+        Np_x   : Number of polynomial degrees in x direction (number of Gauss-Lobatto points)
+        Np_μ   : Number of polynomial degrees in μ direction (number of Gauss-Legendre points)
+        N_t    : Number of time steps for fix-point iteration
+        xs     : Mesh points defining the domain [x0, ..., xn]
+        μs     : Mesh points defining the domain [μ0, ..., μn]
+    Returns:
+        ψ_weights : Solution vector containing the weights of the polynomial basis funcs
+    """
+    # Assemble matrices
+    M_t   = assemble_mass_matrix(σ_t, Np_x, xs)
+    M_a   = assemble_mass_matrix(σ_a, Np_x, xs)
+    G   = assemble_deriv_matrix(Np_x, xs)
+    F_plus, F_minus = assemble_face_matrices(Np_x, xs)
+    
+    M_s = 1/ε * M_t + ε * M_a
+    
+    μs, _ = gausslegendre(Np_μ)
+    
+    ψ_weights = np.zeros((N_t, Np_x*len(xs - 1)))
+
+    for t in range(N_t):
+        for i_μ, μ in enumerate(μs):
+            # Compute A and inflow depending on the sign of μ
+            if μ>=0:
+                A = -np.abs(μ) * G + μ * F_plus + M_t
+                qs_inflow = compute_inflow_term_plus(inflow, Np_x, xs)
+            else:
+                A = -np.abs(μ) * G + μ * F_minus + M_t
+                qs_inflow = compute_inflow_term_minus(inflow, Np_x, xs)
+        
+            # Compute source term
+            qs  = compute_source_term(source, Np_x, xs)  # Source term values
+            qs += μ * qs_inflow
+            ψ_weights[i_μ] = np.linalg.solve(A, qs)
+    
+    return ψ_weights
+
 # print(transport_direct_solve( 1.0, lambda x: 1.0, lambda x: 1.0, lambda x: 1.0, 2, np.array([0.0, 0.5, 1.0])))
 # print(transport_direct_solve(-1.0, lambda x: 1.0, lambda x: 1.0, lambda x: 1.0, 2, np.array([0.0, 0.5, 1.0])))
 
@@ -270,9 +316,11 @@ def error_Lp(ψ_weights, xs, Np, exact_ψ_func, p=2):
             error += np.sum(w_q * (ψ_vals - exact_vals)**p) * (b-a)/2.0
     return error if p=='inf' else error**(1/p)
 
-def plot_solution(ψ_weights, xs, Np, μ, num_plot_pts=200, exact_ψ_func=None):
+def plot_solution(ψ_weights, xs, Np, μ=None, num_plot_pts=200, exact_ψ_func=None, save_plot=False):
     """
     Reconstructs and plots the DG solution ψ(x) over the mesh xs.
+
+    Plot optional:  saved to "test_figures/transport_solution.png" if save_plot=True.
     """
     Ne     = len(xs) - 1
     ξ_b, _ = gausslobatto(Np)                 # interpolation nodes for Legendre basis ("b") funcs v_m
@@ -301,4 +349,15 @@ def plot_solution(ψ_weights, xs, Np, μ, num_plot_pts=200, exact_ψ_func=None):
     if μ is not None:
         plt.title(f'DG solution, μ={μ}, Np={Np}, Ne={Ne}')
     plt.grid(True)
-    plt.show()
+    
+    if save_plot:
+        import os
+        current_directory = os.getcwd()
+        if not os.path.exists("test_figures"):
+            os.makedirs("test_figures")
+        file_name = os.path.join(current_directory, "test_figures/transport_plot.png")
+        plt.savefig(file_name)
+        print(f"Plot saved as {file_name}")
+    else:
+        plt.show()
+
