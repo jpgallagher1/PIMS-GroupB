@@ -3,7 +3,7 @@ from numpy.polynomial.legendre import Legendre
 
 def compute_mass_matrix(sigma_t, x_L, x_R, Np):
       Nq = 3 * Np
-      mus, ws = gausslobatto(Np)
+      mus, ws = gausslegendre(Np)
       ir_mus, ir_ws = gausslobatto(Nq)
       M_local = np.zeros((Np, Np))
       for m in range(Np):
@@ -123,8 +123,9 @@ def assemble_face_matrices(Np, xs, for_TSA=False):
     for n in range(Np):
         for m in range(Np):
             M_plus[je*Np + m, je*Np + n] = pk1[m] * pk1[n]
-            if for_TSA:
-                M_plus[je*Np + m, je*Np + n] -= pk0[m] * pk0[n]
+            M_plus[je*Np + m, (je+1)*Np + n] = -pk0[m] * pk1[n]
+            # if for_TSA:
+            #     M_plus[je*Np + m, je*Np + n] -= pk0[m] * pk0[n]
             M_minus[je*Np + m, (je+1)*Np + n] = pk1[m] * pk0[n]
             M_minus[je*Np + m, je*Np + n] = -pk0[m] * pk0[n]
     
@@ -135,8 +136,9 @@ def assemble_face_matrices(Np, xs, for_TSA=False):
             M_plus[je*Np + m, je*Np + n] = pk1[m] * pk1[n]
             M_plus[je*Np + m, (je-1)*Np + n] = -pk0[m] * pk1[n]
             M_minus[je*Np + m, je*Np + n] = -pk0[m] * pk0[n]
-            if for_TSA:
-                M_minus[je*Np + m, je*Np + n] += pk1[m] * pk1[n]
+            M_minus[je*Np + m, (je-1)*Np + n] = pk1[m] * pk0[n]
+            # if for_TSA:
+                # M_minus[je*Np + m, je*Np + n] += pk1[m] * pk1[n]
     
     return M_plus, M_minus
 
