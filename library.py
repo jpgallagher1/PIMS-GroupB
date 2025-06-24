@@ -220,75 +220,95 @@ def transport_direct_solve(μ:float, σ_t, source, inflow, Np, xs):
         σ_t    : Total scattering opacity func (can be a const or a func of x)
         source : Source term func (can be a const or a func of x)
         inflow : Inflow term func (can be a const or a func of x)
-        Np     : Number of polynomial degrees (number of Gauss-Lobatto points)
-        xs     : Mesh points defining the domain [x0, ..., xn]
+        Np     : Number of Legendre basis funcs per element
+        xs     : DG mesh points defining the domain [x0, ..., xn]
     Returns:
         ψ_weights : Solution vector containing the weights of the polynomial basis funcs
     """
+    Ne     = len(xs) - 1
+    sign_μ = np.sign(μ)
+    μ      = np.abs(μ)
+
     # Assemble matrices
     M   = assemble_mass_matrix(σ_t, Np, xs)
     G   = assemble_deriv_matrix(Np, xs)
     F_plus, F_minus = assemble_face_matrices(Np, xs)
 
     # Compute A and inflow depending on the sign of μ
-    if μ>=0:
-        A = -np.abs(μ) * G + μ * F_plus + M
+    if sign_μ>=0:
+        A = -μ * G + μ * F_plus + M
         qs_inflow = compute_inflow_term_plus(inflow, Np, xs)
     else:
-        A = -np.abs(μ) * G + μ * F_minus + M
+        A = -μ * G + μ * F_minus + M
         qs_inflow = compute_inflow_term_minus(inflow, Np, xs)
     
     # Compute source term
-    qs  = compute_source_term(source, Np, xs)  # Source term values
-    qs += μ * qs_inflow
-    ψ_weights = np.linalg.solve(A, qs)
+    qs = compute_source_term(source, Np, xs) + μ*qs_inflow
+    ψ_weights = np.linalg.solve(A, qs).reshape((Ne,Np))
     
     return ψ_weights
 
-def transport_direct_solve_diffusive(σ_t, σ_a, ε, source, inflow, Np_x, Np_μ, N_t, xs):
+def transport_direct_solve_diffusive(σ_t, σ_a, ε, source, inflow, Np, Nμ, Nt, xs):
     """
-    Solve the transport eq using a DG + collocation (discrete ordinates) method.
-        σ_t    : Transport cross-section func (can be a const or a func of x)
-        σ_a    : Absorption cross-section func (can be a const or a func of x)
+    Solve the transport eq using a fixed point iteration method.
+        σ_t    : Total scattering opacity func (can be a const or a func of x)
+        σ_a    : Absorption scattering opacity func (can be a const or a func of x)
         ε      : Scattering parameter
+        # ψ_0    : Initial guess for the solution (can be a const or a func of x,k)
         source : Source term func (can be a const or a func of x)
         inflow : Inflow term func (can be a const or a func of x)
-        Np_x   : Number of polynomial degrees in x direction (number of Gauss-Lobatto points)
-        Np_μ   : Number of polynomial degrees in μ direction (number of Gauss-Legendre points)
-        N_t    : Number of time steps for fix-point iteration
-        xs     : Mesh points defining the domain [x0, ..., xn]
-        μs     : Mesh points defining the domain [μ0, ..., μn]
+        Np     : Number of Legendre basis funcs per element
+        Nμ     : Number of polynomial degrees in μ direction (number of Gauss-Legendre points)
+        Nt     : Number of time steps for fix-point iteration
+        xs     : DG mesh points defining the domain [x0, ..., xn]
     Returns:
         ψ_weights : Solution vector containing the weights of the polynomial basis funcs
+        μs        : Array of μ values used in the solution
     """
-    # Assemble matrices
-    M_t   = assemble_mass_matrix(σ_t, Np_x, xs)
-    M_a   = assemble_mass_matrix(σ_a, Np_x, xs)
-    G   = assemble_deriv_matrix(Np_x, xs)
-    F_plus, F_minus = assemble_face_matrices(Np_x, xs)
-    
-    M_s = 1/ε * M_t + ε * M_a
-    
-    μs, _ = gausslegendre(Np_μ)
-    
-    ψ_weights = np.zeros((N_t, Np_x*len(xs - 1)))
+    Ne     = len(xs) - 1
+    sign_μ = np.sign(μ)
+    μ      = np.abs(μ)
 
-    for t in range(N_t):
+    # Define scattering opacity σ_s
+    if not callable(σ_t): σ_t = lambda x: σ_t
+    if not callable(σ_a): σ_a = lambda x: σ_a
+    σ_s = lambda x: σ_t(x)/ε + ε*σ_a(x)
+
+    # Assemble matrices
+    M_t = assemble_mass_matrix(lambda x: σ_t(x)/ε, Np, xs)
+    M_s = assemble_mass_matrix(σ_s, Np, xs)
+    G   = assemble_deriv_matrix(Np, xs)
+    F_plus, F_minus = assemble_face_matrices(Np, xs)
+    
+    ξ_μ, w_μ = gausslegendre(Nμ)
+    μs     = ξ_μ # because μ and ξ both in [-1,1]
+    
+    ψ_weights = np.zeros((Nμ, Ne, Np)) # For each μ, for each element, we store the weight vector
+
+    for t in range(Nt):
+        # Compute integral from -1 to 1 of ψμ by quadrature
+        φ = np.zeros((Ne, Np))
+        for i_μ, μ in enumerate(μs): # for each μ,
+            pass
+            #TODO
+            #reconstruct the value of psi
+
+            # φ += w_μ[i_μ] ...
+
         for i_μ, μ in enumerate(μs):
             # Compute A and inflow depending on the sign of μ
-            if μ>=0:
-                A = -np.abs(μ) * G + μ * F_plus + M_t
-                qs_inflow = compute_inflow_term_plus(inflow, Np_x, xs)
+            if sign_μ>=0:
+                A = -μ * G + μ * F_plus + M_t
+                qs_inflow = compute_inflow_term_plus(inflow, Np, xs)
             else:
-                A = -np.abs(μ) * G + μ * F_minus + M_t
-                qs_inflow = compute_inflow_term_minus(inflow, Np_x, xs)
+                A = -μ * G + μ * F_minus + M_t
+                qs_inflow = compute_inflow_term_minus(inflow, Np, xs)
         
             # Compute source term
-            qs  = compute_source_term(source, Np_x, xs)  # Source term values
-            qs += μ * qs_inflow
+            qs = ε * (compute_source_term(source, Np, xs) + μ*qs_inflow)
             ψ_weights[i_μ] = np.linalg.solve(A, qs)
     
-    return ψ_weights
+    return ψ_weights, μs
 
 # print(transport_direct_solve( 1.0, lambda x: 1.0, lambda x: 1.0, lambda x: 1.0, 2, np.array([0.0, 0.5, 1.0])))
 # print(transport_direct_solve(-1.0, lambda x: 1.0, lambda x: 1.0, lambda x: 1.0, 2, np.array([0.0, 0.5, 1.0])))
@@ -306,7 +326,7 @@ def error_Lp(ψ_weights, xs, Np, exact_ψ_func, p=2):
         
         ψ_vals = np.zeros_like(ξ_q)
         for n in range(Np):
-            ψ_vals += ψ_weights[je*Np + n] * eval_pk(ξ_q, n, ξ_b)
+            ψ_vals += ψ_weights[je,n] * eval_pk(ξ_q, n, ξ_b)
         
         exact_vals = exact_ψ_func(x_q)
         diff       = ψ_vals - exact_vals
@@ -332,7 +352,7 @@ def plot_solution(ψ_weights, xs, Np, μ=None, num_plot_pts=200, exact_ψ_func=N
         x_p  = ξ_to_x(ξ_p, a, b)
         
         # Reconstruct polynomial on this element
-        ψ_weights_loc = ψ_weights[je*Np:(je+1)*Np]
+        ψ_weights_loc = ψ_weights[je,:]
         ψ_vals = np.zeros_like(ξ_p)
         for n in range(Np):
             ψ_vals += ψ_weights_loc[n] * eval_pk(ξ_p, n, ξ_b)
