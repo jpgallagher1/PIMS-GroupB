@@ -3,10 +3,21 @@ PIMS Hackathon Group B
 
 June 23-25, 2025
 
+## Main Files
+
+library.py         Main library with functions for simulation
+main.ipynb         Main executable calling functions from library.py
+test_cases.py      Test file for checking if updated functions are working 
+
+
+/archive/          Old Code 
+/test_figures/     Plots from test_cases
+
+## Hackathon plan
+
 Physics-informed preconditioners for a simplified
 model of photon transport
 
-## Hackathon plan
 ### Day 1
 1. Read Section 3.1, which covers
 – A highly simplified model photon transport equation.
