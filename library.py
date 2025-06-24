@@ -248,7 +248,7 @@ def transport_direct_solve(μ:float, σ_t, source, inflow, Np, xs):
 # print(transport_direct_solve( 1.0, lambda x: 1.0, lambda x: 1.0, lambda x: 1.0, 2, np.array([0.0, 0.5, 1.0])))
 # print(transport_direct_solve(-1.0, lambda x: 1.0, lambda x: 1.0, lambda x: 1.0, 2, np.array([0.0, 0.5, 1.0])))
 
-def plot_solution(ψ_weights, xs, Np, μ=None, num_plot_pts=200, exact_ψ_func=None, save_plot=False):
+def plot_solution(ψ_weights, xs, Np, μ=None, num_plot_pts=200, exact_ψ_func=None, save_plot=False, save_name="transport_plot"):
     """
     Reconstructs and plots the DG solution ψ(x) over the mesh xs.
 
@@ -287,9 +287,9 @@ def plot_solution(ψ_weights, xs, Np, μ=None, num_plot_pts=200, exact_ψ_func=N
         current_directory = os.getcwd()
         if not os.path.exists("test_figures"):
             os.makedirs("test_figures")
-        file_name = os.path.join(current_directory, "test_figures/transport_plot.png")
-        plt.savefig(file_name)
-        print(f"Plot saved as {file_name}")
+        file_path = os.path.join(current_directory, f"test_figures/{save_name}.png")
+        plt.savefig(file_path)
+        print(f"Plot saved as {file_path}")
     else:
         plt.show()
 
