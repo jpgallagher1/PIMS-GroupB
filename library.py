@@ -216,7 +216,7 @@ def transport_direct_solve(μ:float, σ_t, source, inflow, Np, xs):
     """
     Solve the transport eq using a DG + collocation (discrete ordinates) method.
         μ      : Transport coefficient (+ for rightward transport, - for leftward)
-        σ_t    : Total cattering opacity func (can be a const or a func of x)
+        σ_t    : Total scattering opacity func (can be a const or a func of x)
         source : Source term func (can be a const or a func of x)
         inflow : Inflow term func (can be a const or a func of x)
         Np     : Number of polynomial degrees (number of Gauss-Lobatto points)
