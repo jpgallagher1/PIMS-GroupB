@@ -269,7 +269,7 @@ def transport_direct_solve_diffusive(σ_t, σ_a, ε, source, inflow, Np, Nμ, Nt
     # Define scattering opacity σ_s
     if not callable(σ_t): σ_t = lambda x: σ_t
     if not callable(σ_a): σ_a = lambda x: σ_a
-    σ_s = lambda x: σ_t(x)/ε + ε*σ_a(x)
+    σ_s = lambda x: σ_t(x)/ε - ε*σ_a(x)
 
     # Assemble matrices
     M_t = assemble_mass_matrix(lambda x: σ_t(x)/ε, Np, xs)
