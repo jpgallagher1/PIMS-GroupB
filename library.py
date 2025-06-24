@@ -216,7 +216,7 @@ def transport_direct_solve(μ:float, σ_t, source, inflow, Np, xs):
     """
     Solve the transport eq using a DG + collocation (discrete ordinates) method.
         μ      : Transport coefficient (+ for rightward transport, - for leftward)
-        σ_t    : Transport cross-section func (can be a const or a func of x)
+        σ_t    : Total cattering opacity func (can be a const or a func of x)
         source : Source term func (can be a const or a func of x)
         inflow : Inflow term func (can be a const or a func of x)
         Np     : Number of polynomial degrees (number of Gauss-Lobatto points)
@@ -247,7 +247,30 @@ def transport_direct_solve(μ:float, σ_t, source, inflow, Np, xs):
 # print(transport_direct_solve( 1.0, lambda x: 1.0, lambda x: 1.0, lambda x: 1.0, 2, np.array([0.0, 0.5, 1.0])))
 # print(transport_direct_solve(-1.0, lambda x: 1.0, lambda x: 1.0, lambda x: 1.0, 2, np.array([0.0, 0.5, 1.0])))
 
-def plot_solution(ψ_weights, xs, Np, μ=None, num_plot_pts=200, exact_ψ_func=None):
+def error_Lp(ψ_weights, xs, Np, exact_ψ_func, p=2):
+    """Compute the L2 error of the DG solution against an exact solution."""
+    Ne = len(xs) - 1
+    ξ_b, _   = gausslobatto(Np)    # interpolation nodes for Legendre basis funcs v_m
+    ξ_q, w_q = gausslegendre(3*Np) # quadrature nodes, ξ_q in [-1, 1]
+    
+    error = 0.0
+    for je in range(Ne):
+        a, b = xs[je], xs[je+1]
+        x_q  = ξ_to_x(ξ_q, a, b)   # mapped quad nodes, x_q in [a, b]
+        
+        ψ_vals = np.zeros_like(ξ_q)
+        for n in range(Np):
+            ψ_vals += ψ_weights[je*Np + n] * eval_pk(ξ_q, n, ξ_b)
+        
+        exact_vals = exact_ψ_func(x_q)
+        diff       = ψ_vals - exact_vals
+        if p == 'inf':
+            error  = max(error, np.max(np.abs(diff)))
+        else:
+            error += np.sum(w_q * (ψ_vals - exact_vals)**p) * (b-a)/2.0
+    return error if p=='inf' else error**(1/p)
+
+def plot_solution(ψ_weights, xs, Np, μ, num_plot_pts=200, exact_ψ_func=None):
     """
     Reconstructs and plots the DG solution ψ(x) over the mesh xs.
     """
