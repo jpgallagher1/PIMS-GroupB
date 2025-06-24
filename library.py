@@ -226,8 +226,6 @@ def transport_direct_solve(μ:float, σ_t, source, inflow, Np, xs):
         ψ_weights : Solution vector containing the weights of the polynomial basis funcs
     """
     Ne     = len(xs) - 1
-    sign_μ = np.sign(μ)
-    μ      = np.abs(μ)
 
     # Assemble matrices
     M   = assemble_mass_matrix(σ_t, Np, xs)
@@ -235,7 +233,7 @@ def transport_direct_solve(μ:float, σ_t, source, inflow, Np, xs):
     F_plus, F_minus = assemble_face_matrices(Np, xs)
 
     # Compute A and inflow depending on the sign of μ
-    if sign_μ>=0:
+    if μ>=0:
         A = -μ * G + μ * F_plus + M
         qs_inflow = compute_inflow_term_plus(inflow, Np, xs)
     else:
@@ -243,7 +241,7 @@ def transport_direct_solve(μ:float, σ_t, source, inflow, Np, xs):
         qs_inflow = compute_inflow_term_minus(inflow, Np, xs)
     
     # Compute source term
-    qs = compute_source_term(source, Np, xs) + μ*qs_inflow
+    qs = compute_source_term(source, Np, xs) + np.abs(μ)*qs_inflow
     ψ_weights = np.linalg.solve(A, qs).reshape((Ne,Np))
     
     return ψ_weights
@@ -266,8 +264,6 @@ def transport_direct_solve_diffusive(σ_t, σ_a, ε, source, inflow, Np, Nμ, Nt
         μs        : Array of μ values used in the solution
     """
     Ne     = len(xs) - 1
-    sign_μ = np.sign(μ)
-    μ      = np.abs(μ)
 
     # Define scattering opacity σ_s
     if not callable(σ_t): σ_t = lambda x: σ_t
@@ -297,7 +293,7 @@ def transport_direct_solve_diffusive(σ_t, σ_a, ε, source, inflow, Np, Nμ, Nt
 
         for i_μ, μ in enumerate(μs):
             # Compute A and inflow depending on the sign of μ
-            if sign_μ>=0:
+            if μ>=0:
                 A = -μ * G + μ * F_plus + M_t
                 qs_inflow = compute_inflow_term_plus(inflow, Np, xs)
             else:
@@ -305,8 +301,8 @@ def transport_direct_solve_diffusive(σ_t, σ_a, ε, source, inflow, Np, Nμ, Nt
                 qs_inflow = compute_inflow_term_minus(inflow, Np, xs)
         
             # Compute source term
-            qs = ε * (compute_source_term(source, Np, xs) + μ*qs_inflow)
-            ψ_weights[i_μ] = np.linalg.solve(A, qs)
+            qs = ε * (compute_source_term(source, Np, xs) + np.abs(μ)*qs_inflow)
+            ψ_weights[i_μ] = np.linalg.solve(A, qs).reshape((Ne,Np))
     
     return ψ_weights, μs
 
