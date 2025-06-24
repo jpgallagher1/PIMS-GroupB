@@ -15,6 +15,28 @@ test_cases.py      Test file for checking if updated functions are working
 /test_figures/     Plots from test_cases
 ```
 
+## Equations for Analyzing Spectral Properties of $(I-T)^{-1}$
+
+### Spectrum of $(I-T)^{-1}$
+
+$(I-T)^{-1} = \epsilon \alpha F_{||} - \epsilon^2 [ \frac{1}{3} M_{t}^{-1} (G - \frac{1}{2}F) M_{t}^{-1} (G - \frac{1}{2}F) - M_{t}^{-1}M_{a} ] + \mathcal{O}(\epsilon^3)$
+
+$D = \alpha \epsilon^{-1} F_{||} - [ \frac{1}{3} M_{t}^{-1} (G - \frac{1}{2}F) M_{t}^{-1} (G - \frac{1}{2}F) - M_{t}^{-1}M_{a} ]$
+
+$F^+,F^- \leftarrow$ assemble_face_matrices
+
+$F = F^+ + F^-$
+
+$F_{||} = F^+ - F^-$
+
+$G \leftarrow$ assemble_deriv_matrix
+
+$M_{t/a,mn} = \int_{x_e}^{x_{e+1}} \sigma_{t/a} v_{e,n} v_{e,m} dx$
+
+$\alpha = \frac{1}{2}\sum_{k} \omega_k |\mu_k|$
+
+$\epsilon \leftarrow$ from user as a hyperparameter
+
 ## Hackathon plan
 
 Physics-informed preconditioners for a simplified
