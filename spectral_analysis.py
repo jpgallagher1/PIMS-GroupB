@@ -108,27 +108,69 @@ def plot_D_spectrum(D_dict, epsilon):
 
 
 def plot_elements_of_matrix_mul(D_dict, epsilon):
-    for D_str in D_dict.keys():
-        if D_str == 'D_35':
-            D = D_dict[D_str]
-        else:
-            D = D_dict[D_str]
-        I_minus_T_inv_perturbation = (epsilon**2)*D
+    num_matrices = len(D_dict)
+    fig, axes = plt.subplots(1, num_matrices, figsize=(6 * num_matrices, 5))
 
+    if num_matrices == 1:
+        axes = [axes]
+
+    for ax, (D_str, D) in zip(axes, D_dict.items()):
+        I_minus_T_inv_perturbation = (epsilon**2) * D
         n = D.shape[0]
         I = np.eye(n)
-        mat_mul = (I - (epsilon**-2)*np.linalg.inv(D)) @ I_minus_T_inv_perturbation
-        plt.imshow(mat_mul)
-        plt.colorbar()
-        plt.xlabel('n')
-        plt.ylabel('m')
-        plt.title(r'$(I - \epsilon^{-2}D^{-1})(I-T)^{-1}$ with '+D_str)
-        
-        plt.show()
+        mat_mul = (I - (epsilon**-2) * np.linalg.inv(D)) @ I_minus_T_inv_perturbation
+
+        im = ax.imshow(mat_mul)
+        fig.colorbar(im, ax=ax)
+        ax.set_xlabel('n')
+        ax.set_ylabel('m')
+        ax.set_title(r'$(I - \epsilon^{-2}D^{-1})(I-T)^{-1}$ with ' + D_str)
+
+    plt.tight_layout()
+    plt.show()
+
+
+def plot_singular_values_comparison(D_dict, epsilon):
+    fig, axes = plt.subplots(1, 2, figsize=(14, 5))
+    fig.suptitle("Singular Value Spectra of $(I - T)^{-1}$ and $I - T$", fontsize=14)
+
+    # Left subplot: singular values of (I - T)^(-1) ≈ ε² D
+    ax = axes[0]
+    for label in D_dict:
+        D = D_dict[label]
+        approx_inv = epsilon**2 * D
+        svals = np.linalg.svd(approx_inv, compute_uv=False)
+        ax.plot(range(len(svals)), svals, label=label)
+    ax.set_title('Singular values of $(I - T)^{-1}$')
+    ax.set_xlabel('index')
+    ax.set_ylabel('value')
+    ax.set_yscale('log')
+    ax.legend()
+    ax.grid(True)
+
+    # Right subplot: singular values of I - T ≈ inv(ε² D)
+    ax = axes[1]
+    for label in D_dict:
+        D = D_dict[label]
+        approx_direct = np.linalg.inv(epsilon**2 * D)
+        svals = np.linalg.svd(approx_direct, compute_uv=False)
+        ax.plot(range(len(svals)), svals, label=label)
+    ax.set_title('Singular values of $I - T$')
+    ax.set_xlabel('index')
+    ax.set_ylabel('value')
+    ax.set_yscale('log')
+    ax.legend()
+    ax.grid(True)
+
+    plt.tight_layout(rect=[0, 0, 1, 0.92])
+    plt.show()
+
+
 
 D_dict = {
     'D_18': D_18,
     'D_35': D_35}
 
 plot_D_spectrum(D_dict, epsilon)
+plot_singular_values_comparison(D_dict, epsilon)
 plot_elements_of_matrix_mul(D_dict, epsilon)
