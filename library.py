@@ -199,6 +199,6 @@ def transport_direct_solve(mu, sigma_t, qs, inflow, Np, xs):
     if mu > 0:
         psi = transport_direct_solve_plus(mu, sigma_t, qs, inflow, Np, xs)
     else:
-        psi = transport_direct_solve_minus(abs(mu), sigma_t, qs, inflow, Np, xs)
+        psi = transport_direct_solve_minus(mu, sigma_t, qs, inflow, Np, xs)
     return psi
 
