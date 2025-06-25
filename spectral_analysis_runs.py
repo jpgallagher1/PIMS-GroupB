@@ -2,26 +2,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 from library import *
 
-# Parameters for the transport problem
-μ       = 0.5
-σ_t     = lambda x: x**2 + 1
-σ_a     = lambda x: x**2 + 1
 
-# Mesh parameters
-xs      = np.linspace(0, 1, 21)
-Np      = 5
-for_TSA = False
-
-# Set \epsilon hyperparameter
-epsilon = 1e-3
-
-# Get alpha from omega_k and mu_k
-N_mu = 3*Np
-mu_k, w_k = gausslegendre(N_mu)
-alpha = 0.5 * np.dot(w_k, np.abs(mu_k))
-
-
-def compute_D(epsilon, alpha, Np, xs, σ_t, σ_a, for_TSA=for_TSA):
+def compute_D(epsilon, alpha, Np, xs, σ_t, σ_a, for_TSA=False):
     F_plus, F_minus = assemble_face_matrices(Np, xs, for_TSA=for_TSA)
     F = F_plus + F_minus
     F_parallel = F_plus - F_minus
@@ -35,7 +17,6 @@ def compute_D(epsilon, alpha, Np, xs, σ_t, σ_a, for_TSA=for_TSA):
 
 def plot_D_spectrum(D_dict, epsilon, save_plot=False, save_name="D_spectrum_plot"):
     fig, axes = plt.subplots(2, 2, figsize=(12, 8))
-    fig.suptitle("Spectral Components of Transport Approximations", fontsize=14)
 
     # First plot: real part of eigenvalues of (I - T)^(-1) ≈ ε² D
     ax = axes[0][0]
@@ -44,12 +25,12 @@ def plot_D_spectrum(D_dict, epsilon, save_plot=False, save_name="D_spectrum_plot
         matrix = epsilon**2 * D
         eigvals = np.linalg.eigvals(matrix)
         real_vals = np.real(eigvals)
-        ax.plot(range(len(real_vals)), real_vals, label=label)
-    ax.set_title('Re eigs of (I - T)$^{-1}$')
-    ax.set_xlabel('eigenvalue index')
-    ax.set_ylabel('value')
+        ax.plot(range(len(real_vals)), real_vals)
+    ax.set_title(r'Real Components of Eigenvalues of $\left(I - T\right)^{-1}$')
+    ax.set_xlabel('Index')
+    ax.set_ylabel(r'Real Component')
     ax.set_yscale('log')
-    ax.legend()
+    # ax.legend()
     ax.grid(True)
 
     # Second plot: imaginary part of eigenvalues of (I - T)^(-1)
@@ -59,11 +40,11 @@ def plot_D_spectrum(D_dict, epsilon, save_plot=False, save_name="D_spectrum_plot
         matrix = epsilon**2 * D
         eigvals = np.linalg.eigvals(matrix)
         imag_vals = np.imag(eigvals)
-        ax.plot(range(len(imag_vals)), imag_vals, label=label)
-    ax.set_title('Im eigs of (I - T)$^{-1}$')
-    ax.set_xlabel('eigenvalue index')
-    ax.set_ylabel('value')
-    ax.legend()
+        ax.plot(range(len(imag_vals)), imag_vals)
+    ax.set_title(r'Imaginary Components of Eigenvalues of $\left(I - T\right)^{-1}$')
+    ax.set_xlabel('Index')
+    ax.set_ylabel(r'Imaginary Component')
+    # ax.legend()
     ax.grid(True)
 
     # Third plot: real part of eigenvalues of I - T ≈ (ε² D)^(-1)
@@ -73,12 +54,12 @@ def plot_D_spectrum(D_dict, epsilon, save_plot=False, save_name="D_spectrum_plot
         matrix = np.linalg.inv(epsilon**2 * D)
         eigvals = np.linalg.eigvals(matrix)
         real_vals = np.real(eigvals)
-        ax.plot(range(len(real_vals)), real_vals, label=label)
-    ax.set_title('Re eigs of I - T')
-    ax.set_xlabel('eigenvalue index')
-    ax.set_ylabel('value')
+        ax.plot(range(len(real_vals)), real_vals)
+    ax.set_title(r'Real Components of Eigenvalues of $\left(I - T\right)$')
+    ax.set_xlabel('Index')
+    ax.set_ylabel(r'Real Component$')
     ax.set_yscale('log')
-    ax.legend()
+    # ax.legend()
     ax.grid(True)
 
     # Fourth plot: imaginary part of eigenvalues of I - T
@@ -88,11 +69,11 @@ def plot_D_spectrum(D_dict, epsilon, save_plot=False, save_name="D_spectrum_plot
         matrix = np.linalg.inv(epsilon**2 * D)
         eigvals = np.linalg.eigvals(matrix)
         imag_vals = np.imag(eigvals)
-        ax.plot(range(len(imag_vals)), imag_vals, label=label)
-    ax.set_title('Im eigs of I - T')
-    ax.set_xlabel('eigenvalue index')
-    ax.set_ylabel('value')
-    ax.legend()
+        ax.plot(range(len(imag_vals)), imag_vals)
+    ax.set_title(r'Imaginary Components of Eigenvalues of $\left(I - T\right)$')
+    ax.set_xlabel('Index')
+    ax.set_ylabel(r'Imaginary Component')
+    # ax.legend()
     ax.grid(True)
 
     plt.tight_layout(rect=[0, 0, 1, 0.95])
@@ -122,11 +103,11 @@ def plot_elements_of_matrix_mul(D_dict, epsilon, save_plot=False, save_name="ele
         I = np.eye(n)
         mat_mul = (I - (epsilon**-2) * np.linalg.inv(D)) @ I_minus_T_inv_perturbation
 
-        im = ax.imshow(mat_mul)
+        im = ax.imshow(mat_mul, cmap='inferno')
         fig.colorbar(im, ax=ax)
         ax.set_xlabel('n')
         ax.set_ylabel('m')
-        ax.set_title(r'$(I - \epsilon^{-2}D^{-1})(I-T)^{-1}$ with ' + D_str)
+        ax.set_title(r'$(I - \epsilon^{-2}D^{-1})(I-T)^{-1}$ ≈ -I')
 
     plt.tight_layout()
     if save_plot:
@@ -144,7 +125,6 @@ def plot_elements_of_matrix_mul(D_dict, epsilon, save_plot=False, save_name="ele
 
 def plot_D_spectrum_magnitude(D_dict, epsilon, save_plot=False, save_name="D_spectrum_magnitude_plot"):
     fig, axes = plt.subplots(1, 2, figsize=(14, 5))
-    fig.suptitle("Magnitude of Eigenvalues of Transport Approximations", fontsize=14)
 
     # Left plot: |eigenvalues| of (I - T)^(-1) ≈ ε² D
     ax = axes[0]
@@ -153,11 +133,12 @@ def plot_D_spectrum_magnitude(D_dict, epsilon, save_plot=False, save_name="D_spe
         matrix = epsilon**2 * D
         eigvals = np.linalg.eigvals(matrix)
         magnitudes = np.abs(eigvals)
-        ax.plot(range(len(magnitudes)), magnitudes, label="|eigenvalues| of (I - T)^(-1) ≈ ε² D")
-    ax.axhline(epsilon, color='gray', linestyle='--', label=f'epsilon = {epsilon}')
-    ax.set_title('Magnitude of eigs of $(I - T)^{-1}$')
-    ax.set_xlabel('eigenvalue index')
-    ax.set_ylabel('magnitude')
+        ax.plot(range(len(magnitudes)), magnitudes, label=r'$|\lambda_i((I - T)^{-1})|$')
+    
+    ax.axhline(epsilon, color='green', linestyle='--', label=f'epsilon = {epsilon}')
+    ax.set_title(r'Magnitude of Eigenvalues of $\left(I - T\right)^{-1}$')
+    ax.set_xlabel('Index')
+    ax.set_ylabel(r'Eigenvalue Magnitudes')
     ax.set_yscale('log')
     ax.legend()
     ax.grid(True)
@@ -169,11 +150,12 @@ def plot_D_spectrum_magnitude(D_dict, epsilon, save_plot=False, save_name="D_spe
         matrix = np.linalg.inv(epsilon**2 * D)
         eigvals = np.linalg.eigvals(matrix)
         magnitudes = np.abs(eigvals)
-        ax.plot(range(len(magnitudes)), magnitudes, label="|eigenvalues| of I - T ≈ inv(ε² D)")
-    ax.axhline(1/epsilon, color='gray', linestyle='--', label=f'1/epsilon = {1/epsilon}')
-    ax.set_title('Magnitude of eigs of $I - T$')
-    ax.set_xlabel('eigenvalue index')
-    ax.set_ylabel('magnitude')
+        ax.plot(range(len(magnitudes)), magnitudes, label=r'$|\lambda_i(I - T)|$')
+    
+    ax.axhline(1/epsilon, color='green', linestyle='--', label=f'1/epsilon = {1/epsilon}')
+    ax.set_title(r'Magnitude of Eigenvalues of $\left(I - T\right)$')
+    ax.set_xlabel('Index')
+    ax.set_ylabel(r'Eigenvalue Magnitudes')
     ax.set_yscale('log')
     ax.legend()
     ax.grid(True)
@@ -202,12 +184,11 @@ def plot_singular_values_comparison(D_dict, epsilon, save_plot=False, save_name=
         D = D_dict[label]
         approx_inv = epsilon**2 * D
         svals = np.linalg.svd(approx_inv, compute_uv=False)
-        print(f'largest singular value of inv(I-T) = {svals[0]}')
         ax.plot(range(len(svals)), svals, label=label)
-    ax.axhline(epsilon, color='gray', linestyle='--', label=f'epsilon = {epsilon}')
-    ax.set_title('Singular values of $(I - T)^{-1}$')
-    ax.set_xlabel('index')
-    ax.set_ylabel('value')
+    ax.axhline(epsilon, color='green', linestyle='--', label=r'$|\sigma_i((I - T)^{-1})|$')
+    ax.set_title(r'Singular Values of $\left(I - T\right)^{-1}$')
+    ax.set_xlabel('Index')
+    ax.set_ylabel('Singular Values')
     ax.set_yscale('log')
     ax.legend()
     ax.grid(True)
@@ -220,10 +201,10 @@ def plot_singular_values_comparison(D_dict, epsilon, save_plot=False, save_name=
         svals = np.linalg.svd(approx_direct, compute_uv=False)
         ax.plot(range(len(svals)), svals, label=label)
     
-    ax.axhline(1/epsilon, color='gray', linestyle='--', label=f'1/epsilon = {1/epsilon}')
-    ax.set_title('Singular values of $I - T$')
-    ax.set_xlabel('index')
-    ax.set_ylabel('value')
+    ax.axhline(1/epsilon, color='green', linestyle='--', label=r'$|\sigma_i(I - T)|$')
+    ax.set_title(r'Singular Values of $\left(I - T\right)$')
+    ax.set_xlabel('Index')
+    ax.set_ylabel('Singular Values')
     ax.set_yscale('log')
     ax.legend()
     ax.grid(True)
@@ -242,11 +223,30 @@ def plot_singular_values_comparison(D_dict, epsilon, save_plot=False, save_name=
         plt.show()
 
 
+# Parameters for the transport problem
+μ       = 0.5
+σ_t     = lambda x: x**2 + 1
+σ_a     = lambda x: x**2 + 1
+
+# Mesh parameters
+xs      = np.linspace(0, 1, 21)
+Np      = 5
+for_TSA = False
+
+# Set \epsilon hyperparameter
+epsilon = 1e-3
+
+# Get alpha from omega_k and mu_k
+N_mu = 3*Np
+mu_k, w_k = gausslegendre(N_mu)
+alpha = 0.5 * np.dot(w_k, np.abs(mu_k))
+
+
 D_dict = {
     'D': compute_D(epsilon, alpha, Np, xs, σ_t, σ_a, for_TSA=for_TSA)
     }
 
 plot_D_spectrum_magnitude(D_dict, epsilon, save_plot=True)
-# plot_D_spectrum(D_dict, epsilon, save_plot=True)
+plot_D_spectrum(D_dict, epsilon, save_plot=True)
 plot_singular_values_comparison(D_dict, epsilon, save_plot=True)
-# plot_elements_of_matrix_mul(D_dict, epsilon, save_plot=True)
+plot_elements_of_matrix_mul(D_dict, epsilon, save_plot=True)
