@@ -36,8 +36,9 @@ def transport_direct_solve(mu: float,
                            qs: np.ndarray,
                            inflow: Callable[[float], float],
                            Np: int,
-                           xs: np.ndarray
-
+                           xs: np.ndarray,
+                           F_plus: np.ndarray = None, F_minus: np.ndarray = None,
+                           G: np.ndarray = None, M: np.ndarray = None
                            ) -> np.ndarray:
     """
     Solve the transport eq using a DG + collocation (discrete ordinates) method.
@@ -47,13 +48,19 @@ def transport_direct_solve(mu: float,
         inflow  : Inflow term func (a func of x)
         Np      : Number of Legendre basis funcs per element
         xs      : DG mesh points defining the domain [x0, ..., xn]
+        F_plus  : Face matrix for rightward transport, precomputed to reduce function overhead
+        F_minus : Face matrix for leftward transport, precomputed to reduce function overhead
+        G       : Derivative matrix, precomputed to reduce function overhead
+        M       : Mass matrix, precomputed to reduce function overhead
     Returns:
         ψ_weights : Solution vector containing the weights of the polynomial basis funcs
     """
     if mu > 0:
-        psi = transport_direct_solve_plus(mu, sigma_t, qs, inflow, Np, xs)
+        psi = transport_direct_solve_plus(mu, sigma_t, qs, inflow, Np, xs,
+                                          F_plus, F_minus, G, M)
     else:
-        psi = transport_direct_solve_minus(mu, sigma_t, qs, inflow, Np, xs)
+        psi = transport_direct_solve_minus(mu, sigma_t, qs, inflow, Np, xs,
+                                          F_plus, F_minus, G, M)
     return psi
 
 
@@ -83,11 +90,15 @@ def transport_direct_solve_diffusive(sigma_t: Callable[[float], float],
     """
     Ne = len(xs) - 1
 
-    # Define scattering opacity sigma_s
-    def sigma_s(x): return sigma_t(x)/e - e*sigma_a(x)
-
     # Assemble matrices
-    M_s = assemble_mass_matrix(sigma_s, Np, xs)  # shape (Ne*Np, Ne*Np)
+    M_s = assemble_mass_matrix(lambda x:
+                               sigma_t(x)/e - e*sigma_a(x),
+                               Np, xs)  # shape (Ne*Np, Ne*Np)
+    M_t = assemble_mass_matrix(lambda x:
+                               sigma_t(x)/e,
+                               Np, xs)
+    F_plus, F_minus = assemble_face_matrices(Np, xs)
+    G = assemble_deriv_matrix(Np, xs)
 
     mus, ws = gausslobatto(Nμ)
 
@@ -103,6 +114,8 @@ def transport_direct_solve_diffusive(sigma_t: Callable[[float], float],
             # Compute RHS
             qs = e * compute_source_term(lambda x: source(x, mu), Np, xs)
             psi_weights_all[i_mu] = transport_direct_solve(
-                mu, lambda x: sigma_t(x)/e, Ms_phi + qs, lambda x: inflow(x, mu), Np, xs)
+                mu, lambda x: sigma_t(x)/e, Ms_phi + qs, lambda x: inflow(x, mu), Np, xs,
+                F_plus, F_minus, G, M_t
+                )
 
     return psi_weights_all.reshape((Nμ, Ne, Np)), mus

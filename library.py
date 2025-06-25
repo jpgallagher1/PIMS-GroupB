@@ -168,26 +168,36 @@ def compute_inflow_term_minus(inflow, Np, xs):
     return qs
 
 
-def transport_direct_solve_plus(mu, sigma_t, qs, inflow, Np, xs):
+def transport_direct_solve_plus(mu, sigma_t, qs, inflow, Np, xs,
+                                F_plus = None, F_minus = None,
+                                G = None, M = None):
     Ne = len(xs) - 1
     mus, ws = gausslobatto(Np)
     qs_inflow = compute_inflow_term_plus(inflow, Np, xs)
-    F_plus, F_minus = assemble_face_matrices(Np, xs)
-    G = assemble_deriv_matrix(Np, xs)
-    M = assemble_mass_matrix(sigma_t, Np, xs)
+    if F_plus is None:
+        F_plus, F_minus = assemble_face_matrices(Np, xs)
+    if G is None:
+        G = assemble_deriv_matrix(Np, xs)
+    if M is None:
+        M = assemble_mass_matrix(sigma_t, Np, xs)
     A = -mu * G + mu * F_plus + M
     qs += mu * qs_inflow
     psi = np.linalg.solve(A, qs)
     return psi
 
 
-def transport_direct_solve_minus(mu, sigma_t, qs, inflow, Np, xs):
+def transport_direct_solve_minus(mu, sigma_t, qs, inflow, Np, xs,
+                                  F_plus = None, F_minus = None,
+                                  G = None, M = None):
     Ne = len(xs) - 1
     mus, ws = gausslobatto(Np)
     qs_inflow = compute_inflow_term_minus(inflow, Np, xs)
-    F_plus, F_minus = assemble_face_matrices(Np, xs)
-    G = assemble_deriv_matrix(Np, xs)
-    M = assemble_mass_matrix(sigma_t, Np, xs)
+    if F_minus is None:
+        F_plus, F_minus = assemble_face_matrices(Np, xs)
+    if G is None:
+        G = assemble_deriv_matrix(Np, xs)
+    if M is None:
+        M = assemble_mass_matrix(sigma_t, Np, xs)
     A = -mu * G + mu * F_minus + M
     qs -= mu * qs_inflow
     psi = np.linalg.solve(A, qs)
