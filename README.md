@@ -77,4 +77,4 @@ operator $I−T$
 $$I−\epsilon^{−2}D^{−1} (I−T)^{−1}
 = I+ O(\epsilon),$$
 where the diffusion matrix D defined in equation (35).
-– Show that the fixed point iteration scheme can be cast in terms of
+– Show that the fixed point iteration scheme can be cast in terms of $(I - \epsilon^{-2}D^{-1})(I - T)^{-1}$.
