@@ -60,7 +60,7 @@ def transport_direct_solve(mu: float,
                                           F_plus, F_minus, G, M)
     else:
         psi = transport_direct_solve_minus(mu, sigma_t, qs, inflow, Np, xs,
-                                          F_plus, F_minus, G, M)
+                                           F_plus, F_minus, G, M)
     return psi
 
 
@@ -73,7 +73,8 @@ def transport_direct_solve_diffusive(sigma_t: Callable[[float], float],
                                      Nμ: int,
                                      xs: np.ndarray,
                                      max_iter: int = 1000,
-                                     tol: float = None
+                                     tol: float = None,
+                                     preconditioning: bool = False
                                      ) -> np.ndarray:
     """
     Solve the transport eq using a fixed point iteration method with 
@@ -87,6 +88,7 @@ def transport_direct_solve_diffusive(sigma_t: Callable[[float], float],
         xs         : DG mesh points defining the domain [x0, ..., xn]
         max_iter   : Maximum number of iterations for fixed point iteration
         tol        : Tolerance for fixed point iteration
+        preconditioning : Whether to use preconditioning
     Returns:
         psi_weights: Solution vector containing the weights of the polynomial basis funcs
         mus        : Array of μ values used in the solution
@@ -100,10 +102,16 @@ def transport_direct_solve_diffusive(sigma_t: Callable[[float], float],
     M_t = assemble_mass_matrix(lambda x:
                                sigma_t(x)/e,
                                Np, xs)
+    M_a = assemble_mass_matrix(lambda x:
+                              sigma_a(x)*e,
+                              Np, xs)
+    
     F_plus, F_minus = assemble_face_matrices(Np, xs)
     G = assemble_deriv_matrix(Np, xs)
 
     mus, ws = gausslobatto(Nμ)
+    alpha = 1/2 * (ws * np.abs(mus)).sum()
+    D = 1/3 * (G - 1/2 * (F_plus + F_minus)).T @ (np.linalg.inv(M_t)) @ (G - 1/2 * (F_plus + F_minus)) + alpha * (F_plus - F_minus) + M_a 
 
     # For each μ, for each element, we store the weight vector
     psi_weights_all = np.zeros((Nμ, Ne*Np))
@@ -118,10 +126,18 @@ def transport_direct_solve_diffusive(sigma_t: Callable[[float], float],
             # Compute RHS
             qs = e * compute_source_term(lambda x: source(x, mu), Np, xs)
             psi_weights_all[i_mu] = transport_direct_solve(
-                mu, lambda x: sigma_t(x)/e, Ms_phi + qs, lambda x: inflow(x, mu), Np, xs,
+                mu, lambda x: sigma_t(x)/e, Ms_phi +
+                qs, lambda x: inflow(x, mu), Np, xs,
                 F_plus, F_minus, G, M_t
-                )
-
+            )
+        
+        if preconditioning:
+            psi_weights_diff = psi_weights_all - psi_weights_all_old
+            phi_diff = (ws.reshape((-1, 1)) * psi_weights_diff).sum(axis=0)
+            Ms_phi_diff = 1/2 * M_s @ phi_diff
+            X = np.linalg.solve(D, Ms_phi_diff)
+            psi_weights_all = psi_weights_all + X
+            
         diff = np.linalg.norm(psi_weights_all - psi_weights_all_old)
         if tol is not None and diff < tol:
             print(f"Converged in {t} iterations")
