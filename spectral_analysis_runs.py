@@ -25,15 +25,18 @@ def compute_D(epsilon, alpha, Np, xs, σ_t, σ_a, for_TSA=for_TSA):
     F_plus, F_minus = assemble_face_matrices(Np, xs, for_TSA=for_TSA)
     F = F_plus + F_minus
     F_parallel = F_plus - F_minus
-    M_t = assemble_mass_matrix(σ_t, Np, xs)
-    M_a = assemble_mass_matrix(σ_a, Np, xs)
+    M_t = assemble_mass_matrix(σ_t, Np, xs)/epsilon
+    M_a = assemble_mass_matrix(σ_a, Np, xs)*epsilon
     M_t_inv = np.linalg.inv(M_t)
     G = assemble_deriv_matrix(Np, xs)
     G_minus_half_of_F = G - 0.5*F
     return (alpha / epsilon) * F_parallel - ((1.0 / 3.0) * (M_t_inv @ G_minus_half_of_F @ M_t_inv @ G_minus_half_of_F) - (M_t_inv @ M_a))
 
 
-def plot_D_spectrum(D_dict, epsilon):
+def plot_D_spectrum(D_dict, epsilon, save_plot=False, save_name="D_spectrum_plot"):
+    """ Plot the spectral components of the transport approximations. """
+
+
     fig, axes = plt.subplots(2, 2, figsize=(12, 8))
     fig.suptitle("Spectral Components of Transport Approximations", fontsize=14)
 
@@ -96,10 +99,20 @@ def plot_D_spectrum(D_dict, epsilon):
     ax.grid(True)
 
     plt.tight_layout(rect=[0, 0, 1, 0.95])
-    plt.show()
+    if save_plot:
+        import os
+        current_directory = os.getcwd()
+        if not os.path.exists("test_figures"):
+            os.makedirs("test_figures")
+        file_name = os.path.join(current_directory, f"test_figures/{save_name}.png")
+        plt.savefig(file_name)
+        print(f"Plot saved as {file_name}")
+        plt.close()
+    else:
+        plt.show()
 
 
-def plot_elements_of_matrix_mul(D_dict, epsilon):
+def plot_elements_of_matrix_mul(D_dict, epsilon, save_plot=False, save_name="elements_of_matrix_mul"):
     num_matrices = len(D_dict)
     fig, axes = plt.subplots(1, num_matrices, figsize=(6 * num_matrices, 5))
 
@@ -119,10 +132,20 @@ def plot_elements_of_matrix_mul(D_dict, epsilon):
         ax.set_title(r'$(I - \epsilon^{-2}D^{-1})(I-T)^{-1}$ with ' + D_str)
 
     plt.tight_layout()
-    plt.show()
+    if save_plot:
+        import os
+        current_directory = os.getcwd()
+        if not os.path.exists("test_figures"):
+            os.makedirs("test_figures")
+        file_name = os.path.join(current_directory, f"test_figures/{save_name}.png")
+        plt.savefig(file_name)
+        print(f"Plot saved as {file_name}")
+        plt.close()
+    else:
+        plt.show()
 
 
-def plot_singular_values_comparison(D_dict, epsilon):
+def plot_singular_values_comparison(D_dict, epsilon, save_plot=False, save_name="singular_values_comparison"):
     fig, axes = plt.subplots(1, 2, figsize=(14, 5))
     fig.suptitle("Singular Value Spectra of $(I - T)^{-1}$ and $I - T$", fontsize=14)
 
@@ -156,15 +179,25 @@ def plot_singular_values_comparison(D_dict, epsilon):
     ax.grid(True)
 
     plt.tight_layout(rect=[0, 0, 1, 0.92])
-    plt.show()
+    if save_plot:
+        import os
+        current_directory = os.getcwd()
+        if not os.path.exists("test_figures"):
+            os.makedirs("test_figures")
+        file_name = os.path.join(current_directory, f"test_figures/{save_name}.png")
+        plt.savefig(file_name)
+        print(f"Plot saved as {file_name}")
+        plt.close()
+    else:
+        plt.show()
 
 print(f'epsilon = {epsilon}')
 
 
 D_dict = {
-    'D': compute_D(epsilon, alpha, Np, xs, σ_t, σ_a, for_TSA=for_TSA, eqn="D_35")
+    'D': compute_D(epsilon, alpha, Np, xs, σ_t, σ_a, for_TSA=for_TSA)
     }
 
-plot_D_spectrum(D_dict, epsilon)
-plot_singular_values_comparison(D_dict, epsilon)
-plot_elements_of_matrix_mul(D_dict, epsilon)
+plot_D_spectrum(D_dict, epsilon, save_plot=True)
+plot_singular_values_comparison(D_dict, epsilon, save_plot=True)
+plot_elements_of_matrix_mul(D_dict, epsilon, save_plot=True)
