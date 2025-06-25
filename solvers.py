@@ -36,7 +36,9 @@ def transport_direct_solve(mu: float,
                            qs: np.ndarray,
                            inflow: Callable[[float], float],
                            Np: int,
-                           xs: np.ndarray) -> np.ndarray:
+                           xs: np.ndarray
+
+                           ) -> np.ndarray:
     """
     Solve the transport eq using a DG + collocation (discrete ordinates) method.
         mu      : Transport coefficient (+ for rightward transport, - for leftward)

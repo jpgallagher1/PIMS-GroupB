@@ -2,36 +2,42 @@ import numpy as np
 from numpy.polynomial.legendre import Legendre
 import tqdm
 
+
 def compute_mass_matrix(sigma_t, x_L, x_R, Np):
-      Nq = 3 * Np
-      mus, ws = gausslobatto(Np)
-      ir_mus, ir_ws = gausslobatto(Nq)
-      M_local = np.zeros((Np, Np))
-      for m in range(Np):
-          for n in range(Np):
+    Nq = 3 * Np
+    mus, ws = gausslobatto(Np)
+    ir_mus, ir_ws = gausslobatto(Nq)
+    M_local = np.zeros((Np, Np))
+    for m in range(Np):
+        for n in range(Np):
             for pt in range(Nq):
                 x_pt = (x_R - x_L) * ir_mus[pt] / 2 + (x_R + x_L) / 2
-                M_local[m, n] += sigma_t(x_pt) * ir_ws[pt] * eval_pk(ir_mus[pt], m, mus) * eval_pk(ir_mus[pt], n, mus)
+                M_local[m, n] += sigma_t(x_pt) * ir_ws[pt] * eval_pk(
+                    ir_mus[pt], m, mus) * eval_pk(ir_mus[pt], n, mus)
 
-      jacobi = (x_R - x_L) / 2.0
-      M_local *= jacobi
-      return M_local
+    jacobi = (x_R - x_L) / 2.0
+    M_local *= jacobi
+    return M_local
 
-def compute_deriv_matrix(x_L, x_R, Np, Nq = None):
-      Nq = 3 * Np
-      mus, ws = gausslobatto(Np)
-      ir_mus, ir_ws = gausslobatto(Nq)
-      M_local = np.zeros((Np, Np))
-      for m in range(Np):
-          for n in range(Np):
-            for pt in range(Nq):              
-                M_local[m, n] += ir_ws[pt] * eval_pk_deriv(ir_mus[pt], m, mus) * eval_pk(ir_mus[pt], n, mus)
-      return M_local
+
+def compute_deriv_matrix(x_L, x_R, Np, Nq=None):
+    Nq = 3 * Np
+    mus, ws = gausslobatto(Np)
+    ir_mus, ir_ws = gausslobatto(Nq)
+    M_local = np.zeros((Np, Np))
+    for m in range(Np):
+        for n in range(Np):
+            for pt in range(Nq):
+                M_local[m, n] += ir_ws[pt] * \
+                    eval_pk_deriv(ir_mus[pt], m, mus) * \
+                    eval_pk(ir_mus[pt], n, mus)
+    return M_local
 
 
 def gausslegendre(N):
     points, weights = np.polynomial.legendre.leggauss(N)
     return points, weights
+
 
 def gausslobatto(N):
     x = np.zeros(N)
@@ -50,11 +56,14 @@ def gausslobatto(N):
         w[i] = 2.0 / (N * (N-1) * (Pn_1_val**2))
     return x, w
 
+
 def eval_pk(x, i, nodes):
     # Compute the i-th Lagrange basis polynomial at x
     xi = nodes[i]
-    terms = [(x - nodes[j])/(xi - nodes[j]) for j in range(len(nodes)) if j != i]
+    terms = [(x - nodes[j])/(xi - nodes[j])
+             for j in range(len(nodes)) if j != i]
     return np.prod(terms, axis=0)
+
 
 def eval_pk_deriv(x, i, nodes):
     n = len(nodes)
@@ -71,7 +80,8 @@ def eval_pk_deriv(x, i, nodes):
             term *= (x - nodes[k]) / (xi - nodes[k])
         result += term
     return result
-  
+
+
 def assemble_mass_matrix(sigma_t, Np, xs):
     Ne = len(xs) - 1
     M = np.zeros((Np*Ne, Np*Ne))
@@ -81,6 +91,7 @@ def assemble_mass_matrix(sigma_t, Np, xs):
             for m in range(Np):
                 M[je*Np + m, je*Np + n] = M_local[m, n]
     return M
+
 
 def assemble_deriv_matrix(Np, xs):
     Ne = len(xs) - 1
@@ -92,6 +103,7 @@ def assemble_deriv_matrix(Np, xs):
                 M[je*Np + m, je*Np + n] = M_local[m, n]
     return M
 
+
 def assemble_face_matrices(Np, xs, for_TSA=False):
     Ne = len(xs) - 1
     mus, ws = gausslobatto(Np)
@@ -99,11 +111,11 @@ def assemble_face_matrices(Np, xs, for_TSA=False):
     M_minus = np.zeros((Np*Ne, Np*Ne))
     pk0 = np.zeros(Np)
     pk1 = np.zeros(Np)
-    
+
     for n in range(Np):
         pk0[n] = eval_pk(-1.0, n, mus)
         pk1[n] = eval_pk(1.0, n, mus)
-    
+
     # Interior faces
     for je in range(1, Ne-1):
         for n in range(Np):
@@ -112,7 +124,7 @@ def assemble_face_matrices(Np, xs, for_TSA=False):
                 M_plus[je*Np + m, (je-1)*Np + n] = -pk0[m] * pk1[n]
                 M_minus[je*Np + m, (je+1)*Np + n] = pk1[m] * pk0[n]
                 M_minus[je*Np + m, je*Np + n] = -pk0[m] * pk0[n]
-    
+
     # Left boundary
     je = 0
     for n in range(Np):
@@ -122,7 +134,7 @@ def assemble_face_matrices(Np, xs, for_TSA=False):
                 M_plus[je*Np + m, je*Np + n] -= pk0[m] * pk0[n]
             M_minus[je*Np + m, (je+1)*Np + n] = pk1[m] * pk0[n]
             M_minus[je*Np + m, je*Np + n] = -pk0[m] * pk0[n]
-    
+
     # Right boundary
     je = Ne-1
     for n in range(Np):
@@ -132,8 +144,9 @@ def assemble_face_matrices(Np, xs, for_TSA=False):
             M_minus[je*Np + m, je*Np + n] = -pk0[m] * pk0[n]
             if for_TSA:
                 M_minus[je*Np + m, je*Np + n] += pk1[m] * pk1[n]
-    
+
     return M_plus, M_minus
+
 
 def compute_inflow_term_plus(inflow, Np, xs):
     Ne = len(xs) - 1
@@ -144,6 +157,7 @@ def compute_inflow_term_plus(inflow, Np, xs):
         qs[je*Np + m] = inflow(xs[0]) * eval_pk(-1.0, m, mus)
     return qs
 
+
 def compute_inflow_term_minus(inflow, Np, xs):
     Ne = len(xs) - 1
     mus, ws = gausslobatto(Np)
@@ -152,6 +166,7 @@ def compute_inflow_term_minus(inflow, Np, xs):
     for m in range(Np):
         qs[je*Np + m] = inflow(xs[-1]) * eval_pk(1.0, m, mus)
     return qs
+
 
 def transport_direct_solve_plus(mu, sigma_t, qs, inflow, Np, xs):
     Ne = len(xs) - 1
@@ -164,6 +179,7 @@ def transport_direct_solve_plus(mu, sigma_t, qs, inflow, Np, xs):
     qs += mu * qs_inflow
     psi = np.linalg.solve(A, qs)
     return psi
+
 
 def transport_direct_solve_minus(mu, sigma_t, qs, inflow, Np, xs):
     Ne = len(xs) - 1
