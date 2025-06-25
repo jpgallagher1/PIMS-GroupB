@@ -363,6 +363,87 @@ def plot_solution(ψ_weights, xs, Np, μ=None, num_plot_pts=200, exact_ψ_func=N
     if μ is not None:
         plt.title(f'DG solution, μ={μ}, Np={Np}, Ne={Ne}')
     plt.grid(True)
+
+    # Convergence Study
+ψ_MMS = lambda x, μ: μ**2 * ((x**2 + 1) + 3.4 * np.cos(2*x))
+σ_t = lambda x: x**3 + 1
+σ_a = lambda x: x**2 + 1
+ε = 0.1
+
+source = lambda x, μ: (
+    μ**3/ε * (2*x - 6.8*np.sin(2*x))
+    + (σ_t(x)/ε**2) * ψ_MMS(x, μ)
+    - (σ_t(x)/ε - ε*σ_a(x))/(3*ε) * ((x**2 +1) + 3.4*np.cos(2*x))
+)
+
+inflow = lambda x, μ: ψ_MMS(x, μ)
+
+# Convergence‐study routine ──
+def convergence_study(Np_list, Ne_list, Nμ, tol=1e-10):
+    data = []
+    # to store previous (h,L2) for each Np
+    prev = {Np: None for Np in Np_list}
+
+    for Np in Np_list:
+        for Ne in Ne_list:
+            xs = np.linspace(0, 1, Ne+1)
+            ψ_all, μs, iters = transport_direct_solve_diffusive(
+                σ_t, σ_a, ε, source, inflow,
+                Np=Np, Nμ=Nμ, xs=xs,
+                max_iter=10000, tol=tol
+            )
+
+            # pick middle μ for error
+            iμ  = len(μs)//2
+            μ0  = μs[iμ]
+            ψ_sol = ψ_all[iμ]
+            # compute norms
+            L2    = error_Lp(ψ_sol, xs, Np, lambda x: ψ_MMS(x, μ0), p=2)
+            Linf  = error_Lp(ψ_sol, xs, Np, lambda x: ψ_MMS(x, μ0), p='inf')
+            h     = 1.0/Ne
+
+            # compute rate if possible
+            if prev[Np] is None:
+                rate = None
+            else:
+                h_prev, L2_prev = prev[Np]
+                rate = np.log(L2_prev / L2) / np.log(h_prev / h)
+
+            # store current for next time
+            prev[Np] = (h, L2)
+
+            # print with or without rate
+            if rate is None:
+                print(f"[Np={Np:2d}, Ne={Ne:3d}]  "
+                      f"h={h:.3e}  L2={L2:.3e}  Linf={Linf:.3e}")
+            else:
+                print(f"[Np={Np:2d}, Ne={Ne:3d}]  "
+                      f"h={h:.3e}  L2={L2:.3e}  rate={rate:.2f}  "
+                      f"Linf={Linf:.3e}")
+
+            data.append((Np, Ne, h, L2, Linf, rate))
+    return data
+
+
+Np_list = [2, 4, 6, 8]      # polynomial orders
+Ne_list = [10, 20, 40, 80] # number of elements
+Nμ      = 15             # angular quad order
+results = convergence_study(Np_list, Ne_list, Nμ)
+
+# ─── 4. Plotting ───
+plt.figure(figsize=(8,6))
+for Np in Np_list:
+ # extract (h, L2) pairs for this Np
+    hs  = [h    for (np_, ne, h,  L2,  Linf) in results if np_==Np]
+    L2s = [L2   for (np_, ne, h,  L2,  Linf) in results if np_==Np]
+    plt.loglog(hs, L2s, marker='o', label=f"$N_p={Np}$")
+    plt.xlabel("Mesh size $h$")
+    plt.ylabel("$L^2$ error")
+    plt.title("Convergence of DG Transport (Manufactured Solution)")
+    plt.grid(True, which="both", ls="--", alpha=0.5)
+    plt.legend()
+    plt.tight_layout()
+    plt.show()
     
     if save_plot:
         import os
