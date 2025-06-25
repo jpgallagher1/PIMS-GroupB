@@ -202,7 +202,7 @@ def compute_source_term(source, Np, xs):
             qs[je * Np + m] = (b - a) / 2.0 * val
     return qs
 
-def error_Lp(ψ_weights_all, xs, Np, exact_sol, p=2):
+def error_Lp(ψ_weights_all, xs, Np, exact_sol, μ_single=None, p=2):
     """
     Compute the L2 error of the DG solution against an exact solution.
     Interally uses ψ_weights_all, the ψ_weights for each μ,
@@ -214,17 +214,21 @@ def error_Lp(ψ_weights_all, xs, Np, exact_sol, p=2):
 
     # Preprocess inputs
     if exact_sol is not None: exact_sol = preprocess_exact_sol(exact_sol)
-    if len(ψ_weights_all.shape) == 1: ψ_weights_all = ψ_weights_all.reshape((1,-1))
-    
+    if len(ψ_weights_all.shape) == 1:
+        ψ_weights_all = ψ_weights_all.reshape((1,-1))
+        assert μ_single is not None, "For solution at single μ, μ_single must be provided."
+        μs = [μ_single]
+    else: μs,_ = gausslegendre(ψ_weights_all.shape[0])
+
     error = 0.0
-    for μ in range(ψ_weights_all.shape[0]):
+    for iμ,μ in enumerate(μs):
         for je in range(Ne):
             a, b = xs[je], xs[je+1]
             x_q  = ξ_to_x(ξ_q, a, b)   # mapped quad nodes, x_q in [a, b]
             
             ψ_vals = np.zeros_like(ξ_q)
             for n in range(Np):
-                ψ_vals += ψ_weights_all[μ,je*Np+n] * eval_pk(ξ_q, n, ξ_b)
+                ψ_vals += ψ_weights_all[iμ,je*Np+n] * eval_pk(ξ_q, n, ξ_b)
             
             exact_vals = exact_sol(x_q,μ)
             diff       = ψ_vals - exact_vals
