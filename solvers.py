@@ -71,8 +71,10 @@ def transport_direct_solve_diffusive(sigma_t: Callable[[float], float],
                                      inflow: Callable[[float, float], float],
                                      Np: int,
                                      Nμ: int,
-                                     Nt: int,
-                                     xs: np.ndarray) -> np.ndarray:
+                                     xs: np.ndarray,
+                                     max_iter: int = 1000,
+                                     tol: float = None
+                                     ) -> np.ndarray:
     """
     Solve the transport eq using a fixed point iteration method with 
         sigma_t    : Total scattering opacity func (a func of x)
@@ -82,8 +84,9 @@ def transport_direct_solve_diffusive(sigma_t: Callable[[float], float],
         inflow     : Inflow term func (a func of x and μ)
         Np         : Number of Legendre basis funcs per element
         Nμ         : Number of polynomial degrees in μ direction (number of Gauss-Legendre points)
-        Nt         : Number of time steps for fix-point iteration
         xs         : DG mesh points defining the domain [x0, ..., xn]
+        max_iter   : Maximum number of iterations for fixed point iteration
+        tol        : Tolerance for fixed point iteration
     Returns:
         psi_weights: Solution vector containing the weights of the polynomial basis funcs
         mus        : Array of μ values used in the solution
@@ -105,7 +108,8 @@ def transport_direct_solve_diffusive(sigma_t: Callable[[float], float],
     # For each μ, for each element, we store the weight vector
     psi_weights_all = np.zeros((Nμ, Ne*Np))
 
-    for t in tqdm.tqdm(range(Nt)):
+    for t in tqdm.tqdm(range(max_iter)):
+        psi_weights_all_old = psi_weights_all.copy()
         # Compute integral from -1 to 1 of psiμ by quadrature
         phi = (ws.reshape((-1, 1)) * psi_weights_all).sum(axis=0)  # shape (Ne*Np)
         Ms_phi = 1/2 * M_s @ phi
@@ -118,4 +122,8 @@ def transport_direct_solve_diffusive(sigma_t: Callable[[float], float],
                 F_plus, F_minus, G, M_t
                 )
 
-    return psi_weights_all.reshape((Nμ, Ne, Np)), mus
+        diff = np.linalg.norm(psi_weights_all - psi_weights_all_old)
+        if tol is not None and diff < tol:
+            print(f"Converged in {t} iterations")
+            break
+    return psi_weights_all.reshape((Nμ, Ne, Np)), mus, t
