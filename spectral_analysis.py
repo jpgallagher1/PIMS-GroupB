@@ -126,6 +126,11 @@ def plot_elements_of_matrix_mul(D_dict, epsilon, save_plot=False, save_name="ele
             D = D_dict[D_str]
         I_minus_T_inv_perturbation = (epsilon**2)*D
 
+    if num_matrices == 1:
+        axes = [axes]
+
+    for ax, (D_str, D) in zip(axes, D_dict.items()):
+        I_minus_T_inv_perturbation = (epsilon**2) * D
         n = D.shape[0]
         I = np.eye(n)
         mat_mul = (I - (epsilon**-2)*np.linalg.inv(D)) @ I_minus_T_inv_perturbation
