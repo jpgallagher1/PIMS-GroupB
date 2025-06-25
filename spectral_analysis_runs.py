@@ -142,7 +142,7 @@ def plot_elements_of_matrix_mul(D_dict, epsilon, save_plot=False, save_name="ele
         plt.show()
 
 
-def plot_D_spectrum_magnitude(D_dict, epsilon):
+def plot_D_spectrum_magnitude(D_dict, epsilon, save_plot=False, save_name="D_spectrum_magnitude_plot"):
     fig, axes = plt.subplots(1, 2, figsize=(14, 5))
     fig.suptitle("Magnitude of Eigenvalues of Transport Approximations", fontsize=14)
 
@@ -179,7 +179,17 @@ def plot_D_spectrum_magnitude(D_dict, epsilon):
     ax.grid(True)
 
     plt.tight_layout(rect=[0, 0, 1, 0.92])
-    plt.show()
+    if save_plot:
+        import os
+        current_directory = os.getcwd()
+        if not os.path.exists("test_figures"):
+            os.makedirs("test_figures")
+        file_name = os.path.join(current_directory, f"test_figures/{save_name}.png")
+        plt.savefig(file_name)
+        print(f"Plot saved as {file_name}")
+        plt.close()
+    else:
+        plt.show()
 
 
 def plot_singular_values_comparison(D_dict, epsilon, save_plot=False, save_name="singular_values_comparison"):
