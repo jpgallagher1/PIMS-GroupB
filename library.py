@@ -2,7 +2,6 @@ import numpy as np
 import matplotlib.pyplot as plt
 import tqdm
 import os
-# from   numpy.polynomial.legendre import Legendre
 
 def ξ_to_x(ξ, a, b):
     """Map the points ξ in [-1, 1] (reference element) to x in [a, b]."""
@@ -59,7 +58,7 @@ def compute_mass_matrix(σ_t, a, b, Np):
       Me[m,n] = (b-a)/2 * sum_k{ w_k * σ_t(x_k) * l_m(ξ_k) * l_n(ξ_k) }
     """
     ξ_b, _   = gausslobatto(Np)    # interpolation nodes for Legendre basis funcs v_m
-    ξ_q, w_q = gausslegendre(3*Np) # quadrature nodes,  ξ_q in [-1, 1]
+    ξ_q, w_q = gausslobatto(3*Np) # quadrature nodes,  ξ_q in [-1, 1]
     x_q      = ξ_to_x(ξ_q, a, b)   # mapped quad nodes, x_q in [a, b]
     Me = np.zeros((Np, Np)) # Mass matrix local to element e
     for m in range(Np):
@@ -68,8 +67,7 @@ def compute_mass_matrix(σ_t, a, b, Np):
             for k in range(3*Np):
                 lm   = eval_pk(ξ_q[k], m, ξ_b)
                 ln   = eval_pk(ξ_q[k], n, ξ_b)
-                σ_t  = σ_t(x_q[k]) if callable(σ_t) else σ_t
-                val += w_q[k] * σ_t * lm * ln
+                val += w_q[k] * (σ_t(x_q[k]) if callable(σ_t) else σ_t) * lm * ln
             Me[m, n] = (b-a)/2 * val
     return Me
 
@@ -81,7 +79,7 @@ def compute_deriv_matrix(a, b, Np):
         Ge[m,n] = sum_k{ w_k * d/dξ l_m(ξ_k) * l_n(ξ_k) }
     """
     ξ_b, _   = gausslobatto(Np)    # interpolation nodes for Legendre basis ("b") funcs v_m
-    ξ_q, w_q = gausslegendre(3*Np) # quadrature nodes, ξ_q in [-1, 1]
+    ξ_q, w_q = gausslobatto(3*Np) # quadrature nodes, ξ_q in [-1, 1]
 
     Ge = np.zeros((Np, Np))
     for m in range(Np):
@@ -226,16 +224,16 @@ def transport_direct_solve(μ:float, σ_t, source, inflow, Np, xs):
     Returns:
         ψ_weights : Solution vector containing the weights of the polynomial basis funcs
     """
-    Ne     = len(xs) - 1
+    Ne = len(xs) - 1
 
     # Assemble matrices
-    M   = assemble_mass_matrix(σ_t, Np, xs)
-    G   = assemble_deriv_matrix(Np, xs)
+    M  = assemble_mass_matrix(σ_t, Np, xs)
+    G  = assemble_deriv_matrix(Np, xs)
     F_plus, F_minus = assemble_face_matrices(Np, xs)
-    print(np.shape(M), np.shape(G), np.shape(F_plus), np.shape(F_minus))
+    # print(np.shape(M), np.shape(G), np.shape(F_plus), np.shape(F_minus))
 
     # Compute A and inflow depending on the sign of μ
-    if μ>=0:
+    if μ>0:
         A = -μ * G + μ * F_plus + M
         qs_inflow = compute_inflow_term_plus(inflow, Np, xs)
     else:
@@ -280,17 +278,23 @@ def transport_direct_solve_diffusive(σ_t, σ_a, ε, source, inflow, Np, Nμ, Nt
     
     ξ_μ, w_μ = gausslegendre(Nμ)
     μs       = ξ_μ # because μ and ξ both in [-1,1]
+    # print(np.sum(w_μ))
     
     ψ_weights_all = np.zeros((Nμ, Ne*Np)) # For each μ, for each element, we store the weight vector
 
     for t in tqdm.tqdm(range(Nt)):
-        # Compute integral from -1 to 1 of ψμ by quadrature
+        ψ_weights_all_old = ψ_weights_all.copy() # Store old weights for convergence check
+        # Compute integral from -1 to 1 of ψ by quadrature
         φ = (w_μ.reshape((-1, 1)) * ψ_weights_all).sum(axis=0) # shape (Ne*Np)
+        # φ = np.zeros(Ne*Np)
+        # for i_μ, μ in enumerate(μs):
+        #     φ += w_μ[i_μ] * ψ_weights_all[i_μ]
         Msφ = 1/2 * M_s @ φ
+        # print("t",t,"Msφ:\n",Msφ)
 
         for i_μ, μ in enumerate(μs):
             # Compute A and inflow depending on the sign of μ
-            if μ>=0:
+            if μ>0:
                 A = -μ * G + μ * F_plus + M_t
                 qs_inflow = compute_inflow_term_plus(lambda x: inflow(x,μ), Np, xs)
             else:
@@ -298,9 +302,12 @@ def transport_direct_solve_diffusive(σ_t, σ_a, ε, source, inflow, Np, Nμ, Nt
                 qs_inflow = compute_inflow_term_minus(lambda x: inflow(x,μ), Np, xs)
         
             # Compute RHS
-            qs = ε * (compute_source_term(lambda x: source(x, μ), Np, xs))  + np.abs(μ)*qs_inflow
+            qs = ε*(compute_source_term(lambda x: source(x, μ), Np, xs)) + np.abs(μ)*qs_inflow
+            
+            # print(np.shape(qs))
             b  = Msφ + qs
             ψ_weights_all[i_μ] = np.linalg.solve(A, b)
+        # print("Convergence check:", np.linalg.norm(ψ_weights_all - ψ_weights_all_old, ord=np.inf))
     
     return ψ_weights_all.reshape((Nμ,Ne,Np)), μs
 
