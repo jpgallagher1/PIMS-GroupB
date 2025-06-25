@@ -1,6 +1,6 @@
 import numpy as np
 from numpy.polynomial.legendre import Legendre
-import matplotlib.pyplot as plt
+import tqdm
 
 def compute_mass_matrix(sigma_t, x_L, x_R, Np):
       Nq = 3 * Np
@@ -202,3 +202,42 @@ def transport_direct_solve(mu, sigma_t, qs, inflow, Np, xs):
         psi = transport_direct_solve_minus(mu, sigma_t, qs, inflow, Np, xs)
     return psi
 
+def transport_direct_solve_diffusive(sigma_t, sigma_a, e, source, inflow, Np, Nμ, Nt, xs):
+    """
+    Solve the transport eq using a fixed point iteration method.
+        sigma_t    : Total scattering opacity func (a func of x)
+        sigma_a    : Absorption scattering opacity func (a func of x)
+        e      : Scattering parameter
+        source : Source term func (can be a const or a func of x and μ)
+        inflow : Inflow term func (can be a const or a func of x)
+        Np     : Number of Legendre basis funcs per element
+        Nμ     : Number of polynomial degrees in μ direction (number of Gauss-Legendre points)
+        Nt     : Number of time steps for fix-point iteration
+        xs     : DG mesh points defining the domain [x0, ..., xn]
+    Returns:
+        psi_weights : Solution vector containing the weights of the polynomial basis funcs
+        mus        : Array of μ values used in the solution
+    """
+    Ne     = len(xs) - 1
+
+    # Define scattering opacity sigma_s
+    sigma_s = lambda x: sigma_t(x)/e - e*sigma_a(x)
+
+    # Assemble matrices
+    M_s = assemble_mass_matrix(sigma_s, Np, xs) # shape (Ne*Np, Ne*Np)
+    
+    mus, ws = gausslobatto(Nμ)
+    
+    psi_weights_all = np.zeros((Nμ, Ne*Np)) # For each μ, for each element, we store the weight vector
+
+    for t in tqdm.tqdm(range(Nt)):
+        # Compute integral from -1 to 1 of psiμ by quadrature
+        φ = (ws.reshape((-1, 1)) * psi_weights_all).sum(axis=0) # shape (Ne*Np)
+        Msφ = 1/2 * M_s @ φ
+
+        for i_mu, mu in enumerate(mus):
+            # Compute RHS
+            qs = e * compute_source_term(lambda x: source(x, mu), Np, xs)
+            psi_weights_all[i_mu] = transport_direct_solve(mu, lambda x: sigma_t(x)/e, Msφ + qs, lambda x: inflow(x, mu), Np, xs)
+    
+    return psi_weights_all.reshape((Nμ,Ne,Np)), mus
