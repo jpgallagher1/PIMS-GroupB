@@ -135,7 +135,7 @@ def plot_D_spectrum_magnitude(D_dict, epsilon, save_plot=False, save_name="D_spe
         magnitudes = np.abs(eigvals)
         ax.plot(range(len(magnitudes)), magnitudes, label=r'$|\lambda_i((I - T)^{-1})|$')
     
-    ax.axhline(epsilon, color='green', linestyle='--', label=f'epsilon = {epsilon}')
+    ax.axhline(epsilon, color='green', linestyle='--', label=r'$\epsilon = $'+str(epsilon))
     ax.set_title(r'Magnitude of Eigenvalues of $\left(I - T\right)^{-1}$')
     ax.set_xlabel('Index')
     ax.set_ylabel(r'Eigenvalue Magnitudes')
@@ -152,7 +152,7 @@ def plot_D_spectrum_magnitude(D_dict, epsilon, save_plot=False, save_name="D_spe
         magnitudes = np.abs(eigvals)
         ax.plot(range(len(magnitudes)), magnitudes, label=r'$|\lambda_i(I - T)|$')
     
-    ax.axhline(1/epsilon, color='green', linestyle='--', label=f'1/epsilon = {1/epsilon}')
+    ax.axhline(1/epsilon, color='green', linestyle='--', label=r'$1/\epsilon = $'+str(1/epsilon))
     ax.set_title(r'Magnitude of Eigenvalues of $\left(I - T\right)$')
     ax.set_xlabel('Index')
     ax.set_ylabel(r'Eigenvalue Magnitudes')
@@ -184,8 +184,8 @@ def plot_singular_values_comparison(D_dict, epsilon, save_plot=False, save_name=
         D = D_dict[label]
         approx_inv = epsilon**2 * D
         svals = np.linalg.svd(approx_inv, compute_uv=False)
-        ax.plot(range(len(svals)), svals, label=label)
-    ax.axhline(epsilon, color='green', linestyle='--', label=r'$|\sigma_i((I - T)^{-1})|$')
+        ax.plot(range(len(svals)), svals, label=r'$|\sigma_i((I - T)^{-1})|$')
+    ax.axhline(epsilon, color='green', linestyle='--', label=r'$\epsilon = $'+str(epsilon))
     ax.set_title(r'Singular Values of $\left(I - T\right)^{-1}$')
     ax.set_xlabel('Index')
     ax.set_ylabel('Singular Values')
@@ -199,9 +199,9 @@ def plot_singular_values_comparison(D_dict, epsilon, save_plot=False, save_name=
         D = D_dict[label]
         approx_direct = np.linalg.inv(epsilon**2 * D)
         svals = np.linalg.svd(approx_direct, compute_uv=False)
-        ax.plot(range(len(svals)), svals, label=label)
+        ax.plot(range(len(svals)), svals, label=r'$|\sigma_i(I - T)|$')
     
-    ax.axhline(1/epsilon, color='green', linestyle='--', label=r'$|\sigma_i(I - T)|$')
+    ax.axhline(1/epsilon, color='green', linestyle='--', label=r'$1/\epsilon = $'+str(1/epsilon))
     ax.set_title(r'Singular Values of $\left(I - T\right)$')
     ax.set_xlabel('Index')
     ax.set_ylabel('Singular Values')
