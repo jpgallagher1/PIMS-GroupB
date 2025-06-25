@@ -33,7 +33,7 @@ def error_Lp(ψ_weights, xs, Np, exact_ψ_func, p=2):
     return error if p == 'inf' else error**(1/p)
 
 
-def plot_solution(ψ_weights, xs, Np, μ=None, num_plot_pts=200, exact_ψ_func=None, save_plot=False):
+def plot_solution(ψ_weights, xs, Np, μ=None, num_plot_pts=200, exact_ψ_func=None, save_plot=False, show_plot=True):
     """
     Reconstructs and plots the DG solution ψ(x) over the mesh xs.
 
@@ -81,7 +81,7 @@ def plot_solution(ψ_weights, xs, Np, μ=None, num_plot_pts=200, exact_ψ_func=N
             os.makedirs("test_figures")
         file_name = os.path.join(
             current_directory, "test_figures/transport_plot.png")
-        plt.savefig(file_name)
+        plt.savefig(file_name, dpi=500)
         print(f"Plot saved as {file_name}")
-    else:
+    elif show_plot:
         plt.show()
